@@ -1,0 +1,611 @@
+openapi: 3.0.3
+info:
+  title: Fédération de Collectivités Agricoles - API REST
+  description: |-
+    API pour la gestion des collectivités agricoles, des membres, des mandats,
+    des cotisations, des comptes, des activités et de l'assiduité.
+    Conforme aux spécifications du TD Final 2025-2026.
+  version: 1.1.0
+  contact:
+    name: Support API Fédération
+servers:
+  - url: /api
+    description: Serveur local
+
+paths:
+  /collectivites:
+    post:
+      summary: Créer une nouvelle collectivité
+      description: |-
+        Ouvre une nouvelle collectivité agricole si les conditions sont remplies (A) :
+        - Au moins 10 membres inscrits
+        - Au moins 5 membres avec 6 mois d'ancienneté
+        - Postes spécifiques (Président, Trésorier, Secrétaire) occupés
+        - Autorisation formelle de la fédération
+      operationId: creerCollectivite
+      tags:
+        - Collectivites
+      parameters:
+        - name: n
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Nom de la collectivité
+        - name: v
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Ville
+        - name: s
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Spécialité agricole
+        - name: aut
+          in: query
+          required: true
+          schema:
+            type: boolean
+          description: Autorisation de la fédération
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: integer
+              description: Liste des IDs des membres fondateurs
+      responses:
+        '200':
+          description: Collectivité créée avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Collectivite'
+        '400':
+          description: Conditions non remplies
+
+  /collectivites/{id}/membres:
+    post:
+      summary: Adhérer à une collectivité (B-2)
+      description: |-
+        Permet l'admission d'un nouveau membre dans une collectivité selon les nouvelles conditions B-2 :
+        - Au moins 2 parrains confirmés
+        - Nombre de parrains locaux >= nombre de parrains externes
+        - Fournir la nature de la relation avec chaque parrain
+        - Paiement de 50 000 Ar + cotisation annuelle intégrale
+      operationId: admettreMembre
+      tags:
+        - Membres
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: n
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Nom
+        - name: p
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Prénom
+        - name: e
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Email
+        - name: t
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Téléphone
+        - name: mp
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Mode de paiement
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties:
+                type: string
+              description: Map des IDs des parrains vers la nature de la relation
+      responses:
+        '200':
+          description: Membre admis
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Membre'
+        '400':
+          description: Conditions d'admission non remplies
+
+  /membres/{id}/transfert:
+    put:
+      summary: Changer de collectivité
+      operationId: changerCollectivite
+      tags:
+        - Membres
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: ncid
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: ID de la nouvelle collectivité
+      responses:
+        '200':
+          description: Transfert effectué
+
+  /membres/{id}/demission:
+    post:
+      summary: Démissionner d'une collectivité
+      operationId: demissionner
+      tags:
+        - Membres
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Démission enregistrée
+
+  /collectivites/{id}/cotisations:
+    post:
+      summary: Enregistrer un encaissement de cotisation
+      operationId: enregistrerCotisation
+      tags:
+        - Cotisations
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: mid
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: ID du membre
+        - name: mon
+          in: query
+          required: true
+          schema:
+            type: number
+          description: Montant
+        - name: mp
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Mode de paiement
+        - name: t
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Type (mensuelle, annuelle, ponctuelle)
+      responses:
+        '200':
+          description: Cotisation enregistrée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cotisation'
+
+    get:
+      summary: Lister les cotisations d'une collectivité
+      operationId: listerCotisations
+      tags:
+        - Cotisations
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Liste des cotisations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Cotisation'
+
+  /collectivites/{id}/comptes:
+    get:
+      summary: Liste des comptes d'une collectivité
+      operationId: listerComptes
+      tags:
+        - Comptabilite
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Liste des comptes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Compte'
+
+    post:
+      summary: Ajouter un compte
+      operationId: ajouterCompte
+      tags:
+        - Comptabilite
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: t
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [caisse, bancaire, mobile_money]
+        - name: tit
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Titulaire du compte
+      responses:
+        '200':
+          description: Compte créé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Compte'
+
+  /comptes/{id}/solde:
+    get:
+      summary: Consulter le solde d'un compte
+      operationId: consulterSolde
+      tags:
+        - Comptabilite
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Solde du compte
+          content:
+            application/json:
+              schema:
+                type: number
+
+  /collectivites/{id}/activites:
+    get:
+      summary: Lister les activités
+      operationId: listerActivites
+      tags:
+        - Activites
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Liste des activités
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Activite'
+
+    post:
+      summary: Créer une activité exceptionnelle
+      operationId: creerActivite
+      tags:
+        - Activites
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: n
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Nom de l'activité
+        - name: d
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          description: Date
+        - name: o
+          in: query
+          required: true
+          schema:
+            type: boolean
+          description: Obligatoire ou non
+      responses:
+        '200':
+          description: Activité créée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Activite'
+
+  /activites/{id}/presences:
+    post:
+      summary: Enregistrer une présence
+      operationId: enregistrerPresence
+      tags:
+        - Assiduite
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: mid
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: ID du membre
+        - name: p
+          in: query
+          required: true
+          schema:
+            type: boolean
+          description: Présent
+        - name: e
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: Excusé
+      responses:
+        '200':
+          description: Présence enregistrée
+
+  /membres/{id}/assiduite:
+    get:
+      summary: Taux d'assiduité d'un membre
+      operationId: tauxAssiduite
+      tags:
+        - Assiduite
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: d
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          description: Date début
+        - name: f
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          description: Date fin
+      responses:
+        '200':
+          description: Taux d'assiduité en pourcentage
+          content:
+            application/json:
+              schema:
+                type: number
+
+  /collectivites/{id}/stats:
+    get:
+      summary: Statistiques d'une collectivité (G)
+      description: |-
+        Retourne :
+        - Le taux d'assiduité globale
+        - Le nombre de membres inscrits
+      operationId: statsCol
+      tags:
+        - Statistiques
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: d
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          description: Date début
+        - name: f
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          description: Date fin
+      responses:
+        '200':
+          description: Statistiques de la collectivité
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  assiduiteGlobale:
+                    type: number
+                  nombreMembres:
+                    type: integer
+
+  /federation/stats:
+    get:
+      summary: Statistiques de la fédération (H)
+      description: |-
+        Rapport global mensuel/annuel contenant pour chaque collectivité :
+        - Le taux d'assiduité global
+        - Le pourcentage de membres à jour de cotisation
+        - Le nombre de nouveaux adhérents
+      operationId: statsFed
+      tags:
+        - Statistiques
+      parameters:
+        - name: d
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          description: Date début
+        - name: f
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          description: Date fin
+      responses:
+        '200':
+          description: Statistiques globales de la fédération
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    collectivite:
+                      type: string
+                    assiduite:
+                      type: number
+                    pourcentageCotisation:
+                      type: number
+                    nouveauxAdherents:
+                      type: integer
+
+components:
+  schemas:
+    Collectivite:
+      type: object
+      properties:
+        id:
+          type: integer
+        nom:
+          type: string
+        ville:
+          type: string
+        specialite:
+          type: string
+        cotisationAnnuelle:
+          type: number
+
+    Membre:
+      type: object
+      properties:
+        id:
+          type: integer
+        nom:
+          type: string
+        prenom:
+          type: string
+        email:
+          type: string
+        telephone:
+          type: string
+        dateAdhesion:
+          type: string
+          format: date
+        poste:
+          type: string
+        collectiviteId:
+          type: integer
+
+    Cotisation:
+      type: object
+      properties:
+        id:
+          type: integer
+        membreId:
+          type: integer
+        collectiviteId:
+          type: integer
+        montant:
+          type: number
+        date:
+          type: string
+          format: date
+        modePaiement:
+          type: string
+        type:
+          type: string
+
+    Compte:
+      type: object
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+        titulaire:
+          type: string
+        solde:
+          type: number
+
+    Activite:
+      type: object
+      properties:
+        id:
+          type: integer
+        nom:
+          type: string
+        date:
+          type: string
+          format: date
+        obligatoire:
+          type: boolean
